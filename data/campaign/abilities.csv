@@ -1,0 +1,2 @@
+name,id,type,tags,activationDays,activationCooldown,durationDays,deactivationDays,deactivationCooldown,unlockedAtStart,defaultForAIFleet,musicSuppression,uiOn,uiOff,uiLoop,worldOn,worldOff,worldLoop,icon,plugin,ai,desc,sortOrder
+"Space Extraction",space_extraction,DURATION,,0,,0,0,0.2,TRUE,,,ui_scavenge_on,,,,,,graphics/spacextra/icons/abilities/space_extraction.png,spacextra.abilities.SpaceExtractionAbility,,"Extract raw resources from space objects.",864
