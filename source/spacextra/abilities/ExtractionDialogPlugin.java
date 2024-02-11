@@ -10,10 +10,11 @@ import com.fs.starfarer.api.impl.campaign.ids.Commodities;
 import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.util.Misc;
-import spacextra.utility.Accessors;
+import spacextra.utility.Common;
 import spacextra.utility.DialogUtilities;
 
 import java.awt.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +28,9 @@ public class ExtractionDialogPlugin implements InteractionDialogPlugin {
     private TextPanelAPI textPanel;
     private OptionPanelAPI options;
     private VisualPanelAPI visual;
+
+    private static final float RESOURCE_WIDGET_HEIGHT = 67;;
+    private static final float YIELD_MULTIPLIER = 1.0f;
 
     private enum OptionId {
         BEGIN,
@@ -45,68 +49,144 @@ public class ExtractionDialogPlugin implements InteractionDialogPlugin {
                 "free_orbit", 480, 300));
         SectorEntityToken target = dialog.getInteractionTarget();
 
-        List<CampaignTerrainAPI> targetTerrains = Accessors.getTerrainsWithPlayerFleet();
+        List<CampaignTerrainAPI> targetTerrains = Common.getTerrainsWithPlayerFleet();
 
-        ExtractionSource source = DialogUtilities.getPrimaryTargetTerrain(targetTerrains);
-        String primaryTargetName = DialogUtilities.getPrimaryTargetName(source);
+        ExtractionSource primaryTargetSource = DialogUtilities.getPrimaryTargetTerrain(targetTerrains);
+        String primaryTargetName = DialogUtilities.getPrimaryTargetName(primaryTargetSource);
 
         textPanel.addParagraph("Your fleet assumes a stable orbit relative to the " + primaryTargetName + ".");
 
         String operationName = "extraction";
-        if (source == ExtractionSource.ASTEROID_BELT || source == ExtractionSource.ASTEROID_FIElD) {
+        if (primaryTargetSource == ExtractionSource.ASTEROID_BELT || primaryTargetSource == ExtractionSource.ASTEROID_FIElD) {
             operationName = "mining";
         }
 
         textPanel.addParagraph("After a short delay, exploration crew officer submits a " +
                 "preliminary assessment of a potential " + operationName + " operation.");
 
+        Color negativeHighlightColor = Misc.getNegativeHighlightColor();
+        Color highlight = Misc.getHighlightColor();
+
+        this.addCapabilitiesOverview();
+
+        int valuePercent = 100;
+        String valueString = valuePercent + "%";
+
+        TooltipMakerAPI info = textPanel.beginTooltip();
+        info.setParaSmallInsignia();
+        info.addPara("Resource " + operationName + " effectiveness: %s",
+                0.0f, highlight, valueString);
+
+        textPanel.addTooltip();
+
+        this.addAvailableSources();
+        this.addYieldProspects();
+
+        options.addOption("Begin " + operationName + " operation", OptionId.BEGIN);
+        options.addOption("Leave", OptionId.LEAVE);
+    }
+
+    private void addAvailableSources() {
+        List<CampaignTerrainAPI> targetTerrains = Common.getTerrainsWithPlayerFleet();
+        Map<ExtractionSource, Float> allAvailableSources = DialogUtilities.getAllAvailableSources(targetTerrains);
+        Color highlight = Misc.getHighlightColor();
+
+        textPanel.addParagraph("Yield sources richness:");
+        TooltipMakerAPI allTerrainsTooltip = textPanel.beginTooltip();
+        allTerrainsTooltip.beginGridFlipped(240.0f, 1, highlight,80.0f, 8.0f);
+        int terrainCount = 0;
+
+        for (Map.Entry<ExtractionSource, Float> entry : allAvailableSources.entrySet()) {
+            ExtractionSource terrainSource = entry.getKey();
+            float richness = entry.getValue();
+            int valuePercent = (int) (richness * 100);
+            String valueString = valuePercent + "%";
+
+            Color richnessColor = RichnessManager.mapRichnessToColor(richness);
+            allTerrainsTooltip.addToGrid(0, terrainCount, terrainSource.getDisplayName(),
+                    valueString, richnessColor);
+            terrainCount++;
+        }
+        allTerrainsTooltip.addGrid(4.0f);
+        textPanel.addTooltip();
+    }
+
+    private void addYieldProspects() {
         SectorAPI sector = Global.getSector();
         FactionAPI playerFaction = sector.getPlayerFaction();
         CampaignFleetAPI fleet = sector.getPlayerFleet();
         CargoAPI cargo = fleet.getCargo();
 
-        Color color = playerFaction.getColor();
-        Color negativeHighlightColor = Misc.getNegativeHighlightColor();
         Color highlight = Misc.getHighlightColor();
-        float costHeight = 67;
+        Color playerFactionColor = playerFaction.getColor();
 
-        ResourceCostPanelAPI cost = textPanel.addCostPanel("Crew & machinery available:", costHeight,
-                color, playerFaction.getDarkUIColor());
+        ResourceCostPanelAPI cost = textPanel.addCostPanel("Potential yield: minimum - maximum",
+                RESOURCE_WIDGET_HEIGHT, playerFactionColor, playerFactionColor);
         cost.setNumberOnlyMode(true);
         cost.setWithBorder(false);
         cost.setAlignment(Alignment.LMID);
 
-        Map<String, Integer> requiredRes = DialogUtilities.getExtractionCapabilities();
+        List<CampaignTerrainAPI> targetTerrains = Common.getTerrainsWithPlayerFleet();
+        Map<ExtractionSource, Float> sources = DialogUtilities.getAllAvailableSources(targetTerrains);
 
-        for (Map.Entry<String, Integer> entry : requiredRes.entrySet()) {
-            String commodityId = entry.getKey();
-            int required = entry.getValue();
-            int available = (int) cargo.getCommodityQuantity(commodityId);
-            Color curr = color;
-            if (required > cargo.getQuantity(CargoAPI.CargoItemType.RESOURCES, commodityId)) {
-                curr = negativeHighlightColor;
-            }
-            cost.addCost(commodityId, required + " (" + available + ")", curr);
+        Map<String, Float> totalYield = ExtractionDialogPlugin.getTotalYield(sources);
+
+        for (Map.Entry<String, Float> entry : totalYield.entrySet()) {
+            float amount = entry.getValue();
+            float minimum = ExtractionCapability.getMinimumRandomized(amount);
+            float maximum = ExtractionCapability.getMaximumRandomized(amount);
+
+            String minimumString = Common.getRoundedToWhole(minimum);
+            String maximumString = Common.getRoundedToWhole(maximum);
+
+            cost.addCost(entry.getKey(), minimumString + " - " + maximumString, highlight);
         }
+
         cost.update();
+    }
 
-        int valuePercent = 100;
-        if (valuePercent < 0) valuePercent = 0;
-        String valueString = valuePercent + "%";
-        Color valueColor = highlight;
+    private void addCapabilitiesOverview() {
+        SectorAPI sector = Global.getSector();
+        FactionAPI playerFaction = sector.getPlayerFaction();
+        CampaignFleetAPI fleet = sector.getPlayerFleet();
+        CargoAPI cargo = fleet.getCargo();
 
-        if (valuePercent < 100) {
-            valueColor = negativeHighlightColor;
+        Color mainPlayerColor = playerFaction.getColor();
+        Color highlight = Misc.getHighlightColor();
+        Color negativeHighlightColor = Misc.getNegativeHighlightColor();
+
+        ResourceCostPanelAPI cost = textPanel.addCostPanel("Crew & machinery: required (available)",
+                RESOURCE_WIDGET_HEIGHT, mainPlayerColor, playerFaction.getDarkUIColor());
+        cost.setNumberOnlyMode(true);
+        cost.setWithBorder(false);
+        cost.setAlignment(Alignment.LMID);
+
+        float machinery = cargo.getCommodityQuantity(Commodities.HEAVY_MACHINERY);
+        float crew = cargo.getCommodityQuantity(Commodities.CREW);
+
+        float neededCrew = ExtractionCapability.getNeededCrew(cargo);
+        float crewedMachinery = ExtractionCapability.getCrewedMachinery(cargo);
+
+        Color crewColor = mainPlayerColor;
+        if (neededCrew > crew) {
+            crewColor = negativeHighlightColor;
+        }
+        Color machineryColor = mainPlayerColor;
+        if (crewedMachinery < machinery) {
+            machineryColor = negativeHighlightColor;
         }
 
-        TooltipMakerAPI info = textPanel.beginTooltip();
-        info.setParaSmallInsignia();
-        info.addPara("Resource " + operationName + " effectiveness: %s", 0.0f, valueColor, valueString);
+        String crewString = Common.getRoundedToWhole(crew);
+        String neededCrewString = Common.getRoundedToWhole(neededCrew);
+        String machineryString = Common.getRoundedToWhole(machinery);
+        String crewedMachineryString = Common.getRoundedToWhole(crewedMachinery);
 
-        textPanel.addTooltip();
+        cost.addCost(Commodities.CREW,
+                neededCrewString + " (" + crewString + ")", crewColor);
+        cost.addCost(Commodities.HEAVY_MACHINERY,
+                machineryString + " (" + crewedMachineryString + ")", machineryColor);
 
-        options.addOption("Begin extraction operation", OptionId.BEGIN);
-        options.addOption("Leave", OptionId.LEAVE);
+        cost.update();
     }
 
     @Override
@@ -124,7 +204,21 @@ public class ExtractionDialogPlugin implements InteractionDialogPlugin {
                 FactoryAPI factory = Global.getFactory();
                 CargoAPI result = factory.createCargo(true);
 
-                result.addCommodity(Commodities.ORE, 10);
+                List<CampaignTerrainAPI> targetTerrains = Common.getTerrainsWithPlayerFleet();
+
+                Map<ExtractionSource, Float> sources = DialogUtilities.getAllAvailableSources(targetTerrains);
+
+                if (sources.isEmpty()) {
+                    throw new RuntimeException("Space Extraction: No target terrain found");
+                }
+
+                Map<String, Float> totalYield = ExtractionDialogPlugin.getTotalYield(sources);
+
+                for (Map.Entry<String, Float> entry : totalYield.entrySet()) {
+                    float amount = entry.getValue();
+                    float randomized = ExtractionCapability.getRandomized(amount);
+                    result.addCommodity(entry.getKey(), Math.round(randomized));
+                }
 
                 visual.showLoot("Extracted", result,
                         false, true,
@@ -142,6 +236,34 @@ public class ExtractionDialogPlugin implements InteractionDialogPlugin {
                 dialog.dismiss();
                 break;
         }
+    }
+
+    /**
+     * @param sources map with extraction sources and their richness.
+     * @return map with commodity IDs and their yield amounts.
+     */
+    private static Map<String, Float> getTotalYield(Map<ExtractionSource, Float> sources) {
+        Map<String, Float> totalYield = new HashMap<>();
+
+        float crewedMachinery = ExtractionCapability.getPlayerCrewedMachinery();
+        for (Map.Entry<ExtractionSource, Float> source : sources.entrySet()) {
+            ExtractionSource extractionSource = source.getKey();
+            Map<String, Float> resources = extractionSource.getResources();
+
+            for (Map.Entry<String, Float> entry : resources.entrySet()) {
+                float amount = (entry.getValue() * crewedMachinery);
+                float richnessModified = amount * source.getValue();
+                float finalAmount = richnessModified * YIELD_MULTIPLIER;
+
+                Float existingAmount = totalYield.get(entry.getKey());
+                if (existingAmount == null) {
+                    totalYield.put(entry.getKey(), finalAmount);
+                } else {
+                    totalYield.put(entry.getKey(), existingAmount + finalAmount);
+                }
+            }
+        }
+        return totalYield;
     }
 
     @Override

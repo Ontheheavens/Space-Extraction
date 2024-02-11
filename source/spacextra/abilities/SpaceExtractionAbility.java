@@ -4,7 +4,6 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.*;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.econ.MarketConditionAPI;
-import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.impl.campaign.abilities.BaseDurationAbility;
 import com.fs.starfarer.api.impl.campaign.ids.Entities;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
@@ -12,7 +11,7 @@ import com.fs.starfarer.api.loading.AbilitySpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.util.Misc;
 import org.lwjgl.util.vector.Vector2f;
-import spacextra.utility.Accessors;
+import spacextra.utility.Common;
 
 import java.awt.*;
 import java.util.List;
@@ -44,7 +43,9 @@ public class SpaceExtractionAbility extends BaseDurationAbility {
 
     @Override
     public boolean isUsable() {
-        if (!Accessors.isInsideExtractionSource()) return false;
+        boolean hasMachinery = ExtractionCapability.hasMinimumCrewedMachinery();
+        boolean isInExtractionSource = Common.isInsideExtractionSource();
+        if (!isInExtractionSource || !hasMachinery) return false;
         return super.isUsable();
     }
 
@@ -64,7 +65,7 @@ public class SpaceExtractionAbility extends BaseDurationAbility {
         tooltip.addTitle(abilitySpec.getName());
         CampaignFleetAPI fleet = this.getFleet();
         LocationAPI containingLocation = fleet.getContainingLocation();
-        List<CampaignTerrainAPI> terrains = Accessors.getTerrainsWithPlayerFleet();
+        List<CampaignTerrainAPI> terrains = Common.getTerrainsWithPlayerFleet();
         if (terrains != null && !terrains.isEmpty()) {
             tooltip.addPara("Fleet is in:", 4.0f);
             tooltip.addSpacer(4.0f);
@@ -78,6 +79,20 @@ public class SpaceExtractionAbility extends BaseDurationAbility {
         if (fleet.getOrbit() != null) {
             addOrbitInfo(tooltip, expanded);
         }
+
+        boolean hasMachinery = ExtractionCapability.hasMinimumCrewedMachinery();
+        boolean isInExtractionSource = Common.isInsideExtractionSource();
+
+        float pad = 10.0f;
+
+        if (!isInExtractionSource) {
+            tooltip.addPara("Your fleet is not currently inside an exploitable terrain.",
+                    Misc.getNegativeHighlightColor(), pad);
+        } else if (!hasMachinery) {
+            tooltip.addPara("Your fleet does not have enough machinery.",
+                    Misc.getNegativeHighlightColor(), pad);
+        }
+
         addIncompatibleToTooltip(tooltip, expanded);
     }
 
