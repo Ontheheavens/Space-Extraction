@@ -2,11 +2,12 @@ package spacextra.utility;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.*;
-import spacextra.abilities.ExtractionSource;
+import com.fs.starfarer.api.util.Misc;
+import org.lwjgl.util.vector.Vector2f;
+import spacextra.abilities.calculations.ExtractionSource;
 
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 /**
  * @author Ontheheavens
@@ -19,12 +20,22 @@ public final class Common {
     private Common() {}
 
     public static boolean isInsideExtractionSource() {
+        ExtractionSource[] extractionSources = ExtractionSource.values();
+        for (ExtractionSource source : extractionSources) {
+            if (Common.isInsideSpecificSource(source)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isInsideSpecificSource(ExtractionSource source) {
         List<CampaignTerrainAPI> terrains = Common.getTerrainsWithPlayerFleet();
-        if (terrains == null) return false;
+        if (terrains == null || terrains.isEmpty()) return false;
         for (CampaignTerrainAPI terrain : terrains) {
             CampaignTerrainPlugin terrainPlugin = terrain.getPlugin();
-            Set<String> allSourceIDs = ExtractionSource.getAllSourceIDs();
-            if (allSourceIDs.contains(terrainPlugin.getTerrainId())) {
+            String sourceTerrainID = source.getTerrainID();
+            if (sourceTerrainID.equals(terrainPlugin.getTerrainId())) {
                 return true;
             }
         }
@@ -72,6 +83,49 @@ public final class Common {
 
     public static String getRoundedToWhole(float value) {
         return String.format("%d", Math.round(value));
+    }
+
+    public static CargoAPI getPlayerCargo() {
+        SectorAPI sector = Global.getSector();
+        FactionAPI playerFaction = sector.getPlayerFaction();
+        CampaignFleetAPI fleet = sector.getPlayerFleet();
+        return fleet.getCargo();
+    }
+
+    public static boolean isInsideCore(Vector2f hyperspaceLocation) {
+        return Common.getCoreFactor(hyperspaceLocation) >= 1.0f;
+    }
+
+    @SuppressWarnings("OverlyComplexArithmeticExpression")
+    private static float getCoreFactor(Vector2f hyperspaceLocation) {
+        Vector2f min = Misc.getCoreMin();
+        Vector2f max = Misc.getCoreMax();
+        Vector2f center = Misc.getCoreCenter();
+
+        float f = 1.4f;
+        float a = (max.x - min.x) * 0.5f * f;
+        float b = (max.y - min.y) * 0.5f * f;
+        float x = hyperspaceLocation.x - center.x;
+        float y = hyperspaceLocation.y - center.y;
+
+        float test = ((x * x) / (a * a)) + ((y * y) / (b * b));
+        float result;
+        if (test >= 1.0f) {
+            result = 0.0f;
+        } else if (test <= 0.75f) {
+            result = 1.0f;
+        } else {
+            result = 1.0f - (test - 0.75f) / 0.25f;
+        }
+        return result;
+    }
+
+    public static String chooseRandom(List<String> strings) {
+        if (strings == null || strings.isEmpty()) {
+            return null;
+        }
+        int randomIndex = random.nextInt(strings.size());
+        return strings.get(randomIndex);
     }
 
 }

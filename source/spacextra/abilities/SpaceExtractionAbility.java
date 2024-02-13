@@ -11,6 +11,9 @@ import com.fs.starfarer.api.loading.AbilitySpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.util.Misc;
 import org.lwjgl.util.vector.Vector2f;
+import spacextra.abilities.calculations.ExtractionCapability;
+import spacextra.abilities.calculations.TimedEffectsManager;
+import spacextra.abilities.interaction.ExtractionDialogPlugin;
 import spacextra.utility.Common;
 
 import java.awt.*;
@@ -25,6 +28,33 @@ import java.util.List;
 public class SpaceExtractionAbility extends BaseDurationAbility {
 
     public static final String TARGET_EXTRACTION_SOURCE = "extraction_source_terrain";
+
+    private static final float LONG_COOLDOWN = 1.0f;
+
+    private boolean extractionDone;
+
+    public void notifyExtractionDone() {
+        this.extractionDone = true;
+        cooldownLeft = LONG_COOLDOWN;
+    }
+
+    @Override
+    public void advance(float amount) {
+        super.advance(amount);
+        TimedEffectsManager.advance(amount);
+
+        if (extractionDone) {
+            if (cooldownLeft <= 0.0f) {
+                extractionDone = false;
+            }
+        }
+    }
+
+    @Override
+    public float getCooldownDays() {
+        if (extractionDone) return LONG_COOLDOWN;
+        return super.getCooldownDays();
+    }
 
     @Override
     protected void activateImpl() {
@@ -86,7 +116,7 @@ public class SpaceExtractionAbility extends BaseDurationAbility {
         float pad = 10.0f;
 
         if (!isInExtractionSource) {
-            tooltip.addPara("Your fleet is not currently inside an exploitable terrain.",
+            tooltip.addPara("Your fleet is not currently inside any exploitable terrain.",
                     Misc.getNegativeHighlightColor(), pad);
         } else if (!hasMachinery) {
             tooltip.addPara("Your fleet does not have enough machinery.",
