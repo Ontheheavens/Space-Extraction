@@ -1,8 +1,8 @@
 package spacextra.abilities.accidents;
 
-import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.campaign.*;
-import com.fs.starfarer.api.impl.campaign.ids.Commodities;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.CampaignTerrainAPI;
+import com.fs.starfarer.api.campaign.TextPanelAPI;
 import com.fs.starfarer.api.util.Pair;
 import spacextra.abilities.calculations.ExtractionSource;
 import spacextra.utility.Common;
@@ -18,16 +18,12 @@ import java.util.Map;
 @SuppressWarnings("MethodMayBeStatic")
 public class EquipmentMalfunction extends AbstractAccident {
 
-    public EquipmentMalfunction(TextPanelAPI textPanel, OptionPanelAPI options, CampaignFleetAPI fleet) {
-        super(textPanel, options, fleet);
-    }
-
     private List<String> getMalfunctionCauses() {
         return Arrays.asList(
-                "neglected wear and tear",
-                "programming software error",
+                "wear and tear of equipment",
+                "a certain network software error",
                 "unforeseen environmental factors",
-                "sudden technical issues"
+                "some sudden technical issues"
         );
     }
 
@@ -49,31 +45,34 @@ public class EquipmentMalfunction extends AbstractAccident {
     }
 
     @Override
-    public void dispatchTextReport(TextPanelAPI textPanel, OptionPanelAPI options) {
-        SectorAPI sector = Global.getSector();
-        CargoAPI losses = getLosses(sector.getPlayerFleet());
+    public void dispatchAccidentReport(TextPanelAPI textPanel, CampaignFleetAPI fleet) {
+        textPanel.setFontInsignia();
+        String circumstance;
+        String cause;
+        if (Common.randomFloat() < 0.5) {
+            circumstance = AbstractAccident.getRandomMiddleOperationBeginning() + " the operation " +
+                    "your flagship's comms erupt with chatter as " + AbstractAccident.getRandomMessage() +
+                    " is sent from the salvage crew.";
+            cause = "Apparently, " + getRandomMalfunctionCause() + " led to a critical malfunction " +
+                    "of extraction equipment, " + getRandomMalfunctionResult() + ".";
+        } else {
+            circumstance = AbstractAccident.getRandomInterruptedLeisureBeginning() + " when a sudden noise " +
+                    "from your comm set interrupts the leisure. Rushing to the terminal, you see "
+                    + AbstractAccident.getRandomMessage() + " flashing on the screen.";
+            cause = "You query attendant duty officer, who reports that " + getRandomMalfunctionCause() +
+                    " caused a disastrous malfunction of extraction hardware, " + getRandomMalfunctionResult() + ".";
+        }
+        textPanel.addParagraph(circumstance);
+        textPanel.addParagraph(cause);
 
-        int crewLost = losses.getCrew();
-        int machineryLost = (int) losses.getCommodityQuantity(Commodities.HEAVY_MACHINERY);
+        this.dispatchLosses(textPanel, fleet);
 
-        String circumstance = AbstractAccident.getRandomBeginning() + " the operation " +
-                "your flagship's comms erupt with chatter as " + AbstractAccident.getRandomMessage() +
-                " is transmitted from the salvage crew.";
-        String cause = "Apparently, some " + getRandomMalfunctionCause() + " led to a critical malfunction " +
-                "of crucial extraction equipment, " + getRandomMalfunctionResult() + ".";
-        String outcome = "After the incident is resolved, the head of the emergency response team reports " +
-                "that a total of " + crewLost + " crew members " +
-                "and " + machineryLost + " units of heavy machinery have been lost.";
+        AbstractAccident.playAccidentSound(SoundType.EXPLOSION);
     }
 
     @Override
     public Pair<Float, Float> getMaximumLossRatio() {
         return new Pair<>(0.015f, 0.035f);
-    }
-
-    @Override
-    public void handleFleetLosses(CampaignFleetAPI fleet) {
-
     }
 
     @Override

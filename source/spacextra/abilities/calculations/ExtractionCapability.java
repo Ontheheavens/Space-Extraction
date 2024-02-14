@@ -28,6 +28,10 @@ public final class ExtractionCapability {
 
     private static final float YIELD_MULTIPLIER = 1.0f;
 
+    public static final float MINIMUM_ACCIDENT_CHANCE = 0.075f;
+
+    public static final float MAXIMUM_ACCIDENT_CHANCE = 0.85f;
+
     private ExtractionCapability() {}
 
     public static float getNeededCrew(CargoAPI cargo) {

@@ -12,11 +12,9 @@ import java.util.Map;
  */
 public interface ExtractionAccident {
 
-    void dispatchTextReport(TextPanelAPI textPanel, OptionPanelAPI options);
+    void dispatchAccidentReport(TextPanelAPI textPanel, CampaignFleetAPI fleet);
 
     CargoAPI getLosses(CampaignFleetAPI fleet);
-
-    void handleFleetLosses(CampaignFleetAPI fleet);
 
     boolean canHappenHere(Iterable<CampaignTerrainAPI> targetTerrains, Map<ExtractionSource, Float> sources);
 

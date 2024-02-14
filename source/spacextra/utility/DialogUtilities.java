@@ -6,8 +6,12 @@ import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.combat.MutableStat;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.util.Misc;
+import spacextra.abilities.accidents.EquipmentMalfunction;
+import spacextra.abilities.accidents.ExtractionAccident;
+import spacextra.abilities.calculations.ExtractionCapability;
 import spacextra.abilities.calculations.ExtractionSource;
 import spacextra.abilities.calculations.SourceDataManager;
+import spacextra.abilities.calculations.TimedEffectsManager;
 
 import java.awt.*;
 import java.util.EnumMap;
@@ -102,6 +106,19 @@ public final class DialogUtilities {
             if ((!percent && mod.getValue() < 1.0f) || mod.getValue() < 0) return Misc.getNegativeHighlightColor();
             return null;
         }
+    }
+
+    public static ExtractionAccident createRandomAccident() {
+        return new EquipmentMalfunction();
+    }
+
+    public static float getAccidentProbability() {
+        float readinessFactor = 1.0f - TimedEffectsManager.getReadiness();
+        float result = ExtractionCapability.MINIMUM_ACCIDENT_CHANCE + readinessFactor;
+        if (result > ExtractionCapability.MAXIMUM_ACCIDENT_CHANCE) {
+            result = ExtractionCapability.MAXIMUM_ACCIDENT_CHANCE;
+        }
+        return result;
     }
 
 }

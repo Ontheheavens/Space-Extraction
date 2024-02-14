@@ -21,11 +21,11 @@ import java.util.Map;
  * @author Ontheheavens
  * @since 13.02.2024
  */
-final class DialogInfoAssembly {
+final class TerrainExtractionInfo {
 
     private static final float RESOURCE_WIDGET_HEIGHT = 67;
 
-    private DialogInfoAssembly() {
+    private TerrainExtractionInfo() {
     }
 
     static void addEfficiencyOverview(TextPanelAPI textPanel, String operationName) {
@@ -88,7 +88,7 @@ final class DialogInfoAssembly {
         Color color = playerFaction.getBrightUIColor();
 
         TooltipMakerAPI spacer = textPanel.beginTooltip();
-        spacer.addSpacer(-2.0f);
+        spacer.addSpacer(-4.0f);
         textPanel.addTooltip();
 
         ResourceCostPanelAPI cost = textPanel.addCostPanel("Potential resource yield: minimum - maximum",
@@ -171,6 +171,23 @@ final class DialogInfoAssembly {
         cost.setLastCostConsumed(true);
 
         cost.update();
+    }
+
+    static void addAccidentChanceHint(TextPanelAPI textPanel) {
+        float accidentProbability = DialogUtilities.getAccidentProbability();
+        if (accidentProbability <= ExtractionCapability.MINIMUM_ACCIDENT_CHANCE) {
+            String lowRisk = "Salvage crews are fully prepared and ready to go, " +
+                    "risk of an accident during extraction operation is %s.";
+            textPanel.addPara(lowRisk, Misc.getPositiveHighlightColor(), "minimal");
+        } else if (accidentProbability < 0.5f) {
+            String significantRisk = "Extraction equipment is in need of maintenance, " +
+                    "lack of preparation can pose a %s risk in an upcoming operation.";
+            textPanel.addPara(significantRisk, Misc.getHighlightColor(), "significant");
+        } else {
+            String highRisk = "Both hardware and crewmen are in a state of disarray, " +
+                    "there is a %s chance of possible accidents.";
+            textPanel.addPara(highRisk, Misc.getNegativeHighlightColor(), "high");
+        }
     }
 
 }

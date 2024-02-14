@@ -19,6 +19,10 @@ public final class Common {
 
     private Common() {}
 
+    public static float randomFloat() {
+        return random.nextFloat();
+    }
+
     public static boolean isInsideExtractionSource() {
         ExtractionSource[] extractionSources = ExtractionSource.values();
         for (ExtractionSource source : extractionSources) {
@@ -120,12 +124,12 @@ public final class Common {
         return result;
     }
 
-    public static String chooseRandom(List<String> strings) {
-        if (strings == null || strings.isEmpty()) {
+    public static <T> T chooseRandom(List<T> list) {
+        if (list == null || list.isEmpty()) {
             return null;
         }
-        int randomIndex = random.nextInt(strings.size());
-        return strings.get(randomIndex);
+        int randomIndex = random.nextInt(list.size());
+        return list.get(randomIndex);
     }
 
 }

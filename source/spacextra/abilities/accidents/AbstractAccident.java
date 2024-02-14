@@ -9,13 +9,16 @@ import com.fs.starfarer.api.campaign.econ.EconomyAPI;
 import com.fs.starfarer.api.fleet.MutableFleetStatsAPI;
 import com.fs.starfarer.api.impl.campaign.ids.Commodities;
 import com.fs.starfarer.api.impl.campaign.ids.Stats;
+import com.fs.starfarer.api.impl.campaign.rulecmd.AddRemoveCommodity;
 import com.fs.starfarer.api.util.DynamicStatsAPI;
+import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.api.util.Pair;
 import com.fs.starfarer.api.util.WeightedRandomPicker;
 import org.lwjgl.util.vector.Vector2f;
 import spacextra.abilities.calculations.ExtractionCapability;
 import spacextra.utility.Common;
 
+import java.awt.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -24,48 +27,33 @@ import java.util.Random;
  * @author Ontheheavens
  * @since 13.02.2024
  */
-@SuppressWarnings("AbstractClassWithOnlyOneDirectInheritor")
 abstract class AbstractAccident implements ExtractionAccident {
 
-    private final TextPanelAPI textPanel;
-
-    private final OptionPanelAPI options;
-
-    private final CampaignFleetAPI fleet;
-
-    AbstractAccident(TextPanelAPI textPanel, OptionPanelAPI options, CampaignFleetAPI fleet) {
-        this.textPanel = textPanel;
-        this.options = options;
-        this.fleet = fleet;
-    }
-
-    public TextPanelAPI getTextPanel() {
-        return textPanel;
-    }
-
-    public OptionPanelAPI getOptions() {
-        return options;
-    }
-
-    public CampaignFleetAPI getFleet() {
-        return fleet;
-    }
-
     @SuppressWarnings("PackageVisibleInnerClass")
-    enum SoundId {
-        EXPLOSION,
-        HIT_SOLID,
-        ASTEROID_COLLISION
+    enum SoundType {
+        EXPLOSION("explosion_from_damage"),
+        HIT_SOLID("hit_solid"),
+        ASTEROID_COLLISION("collision_asteroid_ship");
+
+        private final String soundID;
+
+        SoundType(String sound) {
+            this.soundID = sound;
+        }
+
+        String getSoundId() {
+            return soundID;
+        }
+
     }
 
-    private static List<String> getBeginnings() {
+    private static List<String> getMiddleOperationBeginnings() {
         return Arrays.asList(
                 "In the midst of",
                 "While conducting",
                 "In the course of",
                 "During",
-                "Right in the middle of",
-                "In the thick of"
+                "Right in the middle of"
         );
     }
 
@@ -77,12 +65,24 @@ abstract class AbstractAccident implements ExtractionAccident {
         );
     }
 
+    private static List<String> getInterruptedLeisureBeginnings() {
+        return Arrays.asList(
+                "Very comfortable, you are snuggling in your quarters after lunch",
+                "Eyes closed, you are dozing off in your captain's chair",
+                "With your mouth full, you savor the early meal"
+        );
+    }
+
+    static String getRandomInterruptedLeisureBeginning() {
+        return Common.chooseRandom(AbstractAccident.getInterruptedLeisureBeginnings());
+    }
+
     static String getRandomMessage() {
         return Common.chooseRandom(AbstractAccident.getMessages());
     }
 
-    static String getRandomBeginning() {
-        return Common.chooseRandom(AbstractAccident.getBeginnings());
+    static String getRandomMiddleOperationBeginning() {
+        return Common.chooseRandom(AbstractAccident.getMiddleOperationBeginnings());
     }
 
     @Override
@@ -151,24 +151,46 @@ abstract class AbstractAccident implements ExtractionAccident {
         return losses;
     }
 
-    public static void playAccidentSound(SoundId soundId) {
+    void dispatchLosses(TextPanelAPI textPanel, CampaignFleetAPI fleet) {
+        CargoAPI losses = getLosses(fleet);
+
+        int crewLost = losses.getCrew();
+        int machineryLost = (int) losses.getCommodityQuantity(Commodities.HEAVY_MACHINERY);
+
+        String outcome = "After the incident is resolved, head of the emergency response team reports " +
+                "that a total of ";
+        textPanel.addParagraph(outcome);
+
+        Color highlight = Misc.getHighlightColor();
+
+        String machineryLossString = " units of heavy machinery have been lost.";
+        if (crewLost <= 0) {
+            textPanel.appendToLastParagraph(machineryLost + machineryLossString);
+            textPanel.highlightInLastPara(highlight, "" + machineryLost);
+        } else if (machineryLost <= 0) {
+            textPanel.appendToLastParagraph(crewLost + " crew members have been lost.");
+            textPanel.highlightInLastPara(highlight, "" + crewLost);
+        } else {
+            textPanel.appendToLastParagraph(crewLost + " crew members " +
+                    "and " + machineryLost + machineryLossString);
+            textPanel.highlightInLastPara(highlight, "" + crewLost, "" + machineryLost);
+        }
+
+        CargoAPI fleetCargo = fleet.getCargo();
+        for (CargoStackAPI stack : losses.getStacksCopy()) {
+            float stackSize = stack.getSize();
+            String commodityId = stack.getCommodityId();
+
+            fleetCargo.removeCommodity(commodityId, stackSize);
+            AddRemoveCommodity.addCommodityLossText(commodityId, (int) stackSize, textPanel);
+        }
+    }
+
+    static void playAccidentSound(SoundType sound) {
         SoundPlayerAPI soundPlayer = Global.getSoundPlayer();
         Vector2f position = soundPlayer.getListenerPos();
         Vector2f velocity = new Vector2f();
-
-        String soundName = null;
-        switch (soundId) {
-            case EXPLOSION:
-                soundName = "explosion_from_damage";
-                break;
-            case HIT_SOLID:
-                soundName = "hit_solid";
-                break;
-            case ASTEROID_COLLISION:
-                soundName = "collision_asteroid_ship";
-                break;
-        }
-        soundPlayer.playSound(soundName, 1, 1, position, velocity);
+        soundPlayer.playSound(sound.getSoundId(), 1, 1, position, velocity);
     }
 
 }
