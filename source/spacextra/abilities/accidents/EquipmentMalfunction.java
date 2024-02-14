@@ -71,6 +71,9 @@ public class EquipmentMalfunction extends AbstractAccident {
     }
 
     @Override
+    protected void dispatchAdditionalLosses() {}
+
+    @Override
     public Pair<Float, Float> getMaximumLossRatio() {
         return new Pair<>(0.015f, 0.035f);
     }

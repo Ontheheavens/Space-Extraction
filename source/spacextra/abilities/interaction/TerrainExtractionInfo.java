@@ -9,7 +9,6 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.util.Misc;
 import spacextra.abilities.calculations.ExtractionCapability;
 import spacextra.abilities.calculations.ExtractionSource;
-import spacextra.abilities.calculations.SourceDataManager;
 import spacextra.utility.Common;
 import spacextra.utility.DialogUtilities;
 
@@ -54,27 +53,13 @@ final class TerrainExtractionInfo {
     }
 
     static void addAvailableSources(TextPanelAPI textPanel) {
-        java.util.List<CampaignTerrainAPI> targetTerrains = Common.getTerrainsWithPlayerFleet();
+        List<CampaignTerrainAPI> targetTerrains = Common.getTerrainsWithPlayerFleet();
         Map<ExtractionSource, Float> allAvailableSources = DialogUtilities.getAllAvailableSources(targetTerrains);
         Color highlight = Misc.getHighlightColor();
 
         textPanel.addParagraph("Resource richness:");
         TooltipMakerAPI allTerrainsTooltip = textPanel.beginTooltip();
-        allTerrainsTooltip.beginGridFlipped(240.0f, 1, highlight,50.0f, 10.0f);
-        int terrainCount = 0;
-
-        for (Map.Entry<ExtractionSource, Float> entry : allAvailableSources.entrySet()) {
-            ExtractionSource terrainSource = entry.getKey();
-            float richness = entry.getValue();
-            String valuePercent = Misc.getRoundedValueMaxOneAfterDecimal(richness * 100);
-            String valueString = valuePercent + "%";
-
-            Color richnessColor = SourceDataManager.mapRichnessToColor(richness);
-            allTerrainsTooltip.addToGrid(0, terrainCount, terrainSource.getDisplayName(),
-                    valueString, richnessColor);
-            terrainCount++;
-        }
-        allTerrainsTooltip.addGrid(-4.0f);
+        DialogUtilities.addTerrainSources(allTerrainsTooltip, highlight, allAvailableSources);
         textPanel.addTooltip();
     }
 

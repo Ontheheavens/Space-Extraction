@@ -1,12 +1,13 @@
 package spacextra.abilities.accidents;
 
-import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.campaign.CampaignTerrainAPI;
-import com.fs.starfarer.api.campaign.TextPanelAPI;
+import com.fs.starfarer.api.campaign.*;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.api.util.Pair;
 import spacextra.abilities.calculations.ExtractionSource;
 import spacextra.utility.Common;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,19 +20,34 @@ public class AsteroidCollision extends AbstractAccident {
     public void dispatchAccidentReport(TextPanelAPI textPanel, CampaignFleetAPI fleet) {
         textPanel.setFontInsignia();
 
-        String circumstance;
-        String cause;
-        if (Common.randomFloat() < 0.5) {
-
-        } else {
-
-        }
-//        textPanel.addParagraph(circumstance);
-//        textPanel.addParagraph(cause);
+        String circumstance = "";
+        String cause = "";
+        textPanel.addParagraph(circumstance);
+        textPanel.addParagraph(cause);
 
         this.dispatchLosses(textPanel, fleet);
 
-        AbstractAccident.playAccidentSound(SoundType.ASTEROID_COLLISION);
+        FleetDataAPI fleetData = fleet.getFleetData();
+        List<FleetMemberAPI> membersListCopy = fleetData.getMembersListCopy();
+        FleetMemberAPI member = membersListCopy.get(0);
+
+        float damageMult = 1.0f;
+        Misc.applyDamage(member, null, damageMult, true, "asteroid_impact",
+                "Asteroid impact", false, textPanel,
+                member.getShipName() + " suffers damage from an asteroid impact");
+
+        SoundType soundType;
+        if (Common.randomFloat() < 0.5) {
+            soundType = SoundType.ASTEROID_COLLISION;
+        } else {
+            soundType = SoundType.HIT_HEAVY;
+        }
+        AbstractAccident.playAccidentSound(soundType);
+    }
+
+    @Override
+    protected void dispatchAdditionalLosses() {
+
     }
 
     @Override

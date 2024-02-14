@@ -30,6 +30,7 @@ public final class DialogUtilities {
         if (source == null) {
             return result;
         }
+
         switch (source) {
             case ASTEROID_BELT:
                 result = "asteroid belt";
@@ -89,6 +90,25 @@ public final class DialogUtilities {
 
     public static TooltipMakerAPI.StatModValueGetter getEfficiencyModPrinter() {
         return new EfficiencyValueGetter();
+    }
+
+    public static void addTerrainSources(TooltipMakerAPI tooltip, Color highlight,
+                                         Map<ExtractionSource, Float> allAvailableSources) {
+        tooltip.beginGridFlipped(240.0f, 1, highlight,50.0f, 10.0f);
+        int terrainCount = 0;
+
+        for (Map.Entry<ExtractionSource, Float> entry : allAvailableSources.entrySet()) {
+            ExtractionSource terrainSource = entry.getKey();
+            float richness = entry.getValue();
+            String valuePercent = Misc.getRoundedValueMaxOneAfterDecimal(richness * 100);
+            String valueString = valuePercent + "%";
+
+            Color richnessColor = SourceDataManager.mapRichnessToColor(richness);
+            tooltip.addToGrid(0, terrainCount, terrainSource.getDisplayName(),
+                    valueString, richnessColor);
+            terrainCount++;
+        }
+        tooltip.addGrid(-4.0f);
     }
 
     private static class EfficiencyValueGetter implements TooltipMakerAPI.StatModValueGetter {

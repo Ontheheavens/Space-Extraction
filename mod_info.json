@@ -1,0 +1,12 @@
+{
+	"id":"space_extraction",
+	"name":"Space Extraction",
+	"author":"Ontheheavens",
+	"version":"0.1.0",
+	"description":"Mining as a standalone feature.",
+	"gameVersion":"0.97a-RC6",
+	"jars":["jars/space_extraction.jar"],
+	"modPlugin":"spacextra.SpaceExtraModPlugin",
+	"totalConversion": "false",
+	"utility": "false"
+}

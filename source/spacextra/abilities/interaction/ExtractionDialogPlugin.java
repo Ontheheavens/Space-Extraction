@@ -52,7 +52,6 @@ public class ExtractionDialogPlugin implements InteractionDialogPlugin {
 
         visual.showImageVisual(new InteractionDialogImageVisual("illustrations",
                 "free_orbit", 480, 300));
-        SectorEntityToken target = dialog.getInteractionTarget();
 
         List<CampaignTerrainAPI> targetTerrains = Common.getTerrainsWithPlayerFleet();
 

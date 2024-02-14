@@ -33,6 +33,7 @@ abstract class AbstractAccident implements ExtractionAccident {
     enum SoundType {
         EXPLOSION("explosion_from_damage"),
         HIT_SOLID("hit_solid"),
+        HIT_HEAVY("hit_heavy"),
         ASTEROID_COLLISION("collision_asteroid_ship");
 
         private final String soundID;
@@ -176,6 +177,15 @@ abstract class AbstractAccident implements ExtractionAccident {
             textPanel.highlightInLastPara(highlight, "" + crewLost, "" + machineryLost);
         }
 
+        this.dispatchAdditionalLosses();
+
+        AbstractAccident.handleCommodityLossTexts(textPanel, fleet, losses);
+    }
+
+    protected abstract void dispatchAdditionalLosses();
+
+    private static void handleCommodityLossTexts(TextPanelAPI textPanel, SectorEntityToken fleet,
+                                                 CargoAPI losses) {
         CargoAPI fleetCargo = fleet.getCargo();
         for (CargoStackAPI stack : losses.getStacksCopy()) {
             float stackSize = stack.getSize();

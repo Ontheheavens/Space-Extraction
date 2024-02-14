@@ -12,12 +12,15 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.util.Misc;
 import org.lwjgl.util.vector.Vector2f;
 import spacextra.abilities.calculations.ExtractionCapability;
+import spacextra.abilities.calculations.ExtractionSource;
 import spacextra.abilities.calculations.TimedEffectsManager;
 import spacextra.abilities.interaction.ExtractionDialogPlugin;
 import spacextra.utility.Common;
+import spacextra.utility.DialogUtilities;
 
 import java.awt.*;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Ontheheavens
@@ -89,31 +92,38 @@ public class SpaceExtractionAbility extends BaseDurationAbility {
     protected void cleanupImpl() {}
 
     @Override
+    public float getTooltipWidth() {
+        return 300.0f;
+    }
+
+    @Override
     public void createTooltip(TooltipMakerAPI tooltip, boolean expanded) {
-        Color highlight = Misc.getHighlightColor();
         AbilitySpecAPI abilitySpec = this.getSpec();
-        tooltip.addTitle(abilitySpec.getName());
+
+        Color highlight = Misc.getHighlightColor();
+        Color gray = Misc.getGrayColor();
+
+        tooltip.addTitle(spec.getName());
+
+        float pad = 10.0f;
+
+        tooltip.addPara("Exploit space objects for valuable raw resources.", pad);
+
         CampaignFleetAPI fleet = this.getFleet();
         LocationAPI containingLocation = fleet.getContainingLocation();
+
         List<CampaignTerrainAPI> terrains = Common.getTerrainsWithPlayerFleet();
+        Map<ExtractionSource, Float> allAvailableSources = DialogUtilities.getAllAvailableSources(terrains);
+
         if (terrains != null && !terrains.isEmpty()) {
-            tooltip.addPara("Fleet is in:", 4.0f);
-            tooltip.addSpacer(4.0f);
-            for (CampaignTerrainAPI terrain : terrains) {
-                CampaignTerrainPlugin terrainPlugin = terrain.getPlugin();
-                String terrainName = terrainPlugin.getTerrainName();
-                tooltip.addPara("   - %s (Instance: %s)", 2.0f, highlight,
-                        terrainName, terrain.toString());
-            }
-        }
-        if (fleet.getOrbit() != null) {
-            addOrbitInfo(tooltip, expanded);
+            tooltip.addPara("Space terrain available for extraction:", 4.0f);
+            tooltip.addSpacer(8.0f);
+
+            DialogUtilities.addTerrainSources(tooltip, highlight, allAvailableSources);
         }
 
         boolean hasMachinery = ExtractionCapability.hasMinimumCrewedMachinery();
         boolean isInExtractionSource = Common.isInsideExtractionSource();
-
-        float pad = 10.0f;
 
         if (!isInExtractionSource) {
             tooltip.addPara("Your fleet is not currently inside any exploitable terrain.",
